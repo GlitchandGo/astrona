@@ -1,1 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Astrona — Call</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-light">
+  <div class="nav-bar">
+    <button class="ghost" onclick="history.back()">← Back</button>
+    <div class="spacer"></div>
+    <button id="toggleTheme" class="ghost">Light/Dark</button>
+  </div>
 
+  <main class="call">
+    <div class="call-card">
+      <img id="avatar" class="avatar-lg" src="assets/default-avatar.png" alt="">
+      <div id="status" class="title">Calling...</div>
+      <div class="controls">
+        <button id="mute" class="ghost">Mute</button>
+        <button id="hold" class="ghost">Hold</button>
+        <button id="hang" class="danger">Hang up</button>
+      </div>
+      <audio id="remoteAudio" autoplay></audio>
+    </div>
+  </main>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script src="ws.js"></script>
+  <script src="rtc.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    const params = new URLSearchParams(location.search);
+    const peerId = params.get('peer');
+
+    const pc = RTC.createPeer({ audio: true, video: false });
+    let localStream = null;
+
+    async function init() {
+      APP.ensureAuth();
+      WS.connect(null, handleSignal);
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStream.getAudioTracks()[0].enabled = true;
+      pc.addTrack(localStream.getAudioTracks()[0], localStream);
+      pc.ontrack = (e) => { remoteAudio.srcObject = e.streams[0]; };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      WS.send('call-offer', { to: peerId, data: offer });
+      status.textContent = 'Calling contact...';
+    }
+
+    function handleSignal(evt) {
+      if (evt.type === 'call-answer' && evt.payload.from === peerId) {
+        pc.setRemoteDescription(evt.payload.data);
+        status.textContent = 'Connected';
+      }
+      if (evt.type === 'call-ice' && evt.payload.from === peerId) {
+        pc.addIceCandidate(evt.payload.data).catch(()=>{});
+      }
+      if (evt.type === 'call-hold' && evt.payload.from === peerId) {
+        status.textContent = 'On Hold';
+      }
+      if (evt.type === 'call-end' && evt.payload.from === peerId) {
+        status.textContent = 'Call ended';
+        setTimeout(()=> history.back(), 1000);
+      }
+    }
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) WS.send('call-ice', { to: peerId, data: e.candidate });
+    };
+
+    mute.addEventListener('click', () => {
+      const t = localStream.getAudioTracks()[0];
+      t.enabled = !t.enabled;
+      // local mute hidden; no signal emitted
+    });
+
+    hold.addEventListener('click', () => {
+      // Mute both ends: signal hold; remote UI shows "On Hold"
+      WS.send('call-hold', { to: peerId, data: { hold: true } });
+      status.textContent = 'On Hold';
+    });
+
+    hang.addEventListener('click', () => {
+      WS.send('call-end', { to: peerId, data: {} });
+      pc.close();
+      history.back();
+    });
+
+    init();
+  </script>
+</body>
+</html>
