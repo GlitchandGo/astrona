@@ -4,7 +4,8 @@ window.WS = (() => {
   function connect(onOpen, onMessage) {
     if (sock && sock.readyState === 1) return;
     const token = APP.token();
-    sock = new WebSocket(`${location.origin.replace('http', 'ws')}/?token=${token}`);
+    const base = location.origin.replace(/^http/, 'ws');
+    sock = new WebSocket(`${base}/?token=${token}`);
     sock.onopen = () => { onOpen && onOpen(); };
     sock.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
