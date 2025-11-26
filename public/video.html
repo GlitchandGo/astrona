@@ -1,1 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Astrona — Video call</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-light">
+  <div class="nav-bar">
+    <button class="ghost" onclick="history.back()">← Back</button>
+    <div class="spacer"></div>
+    <button id="toggleTheme" class="ghost">Light/Dark</button>
+  </div>
 
+  <main class="video">
+    <div class="remote-box" id="remoteBox">
+      <video id="remoteVideo" autoplay playsinline class="remote"></video>
+      <div id="videoStatus" class="overlay">Calling...</div>
+    </div>
+    <div class="local-box">
+      <video id="localVideo" autoplay muted playsinline class="local"></video>
+    </div>
+    <div class="controls">
+      <button id="switchCam" class="ghost">Switch camera</button>
+      <button id="toggleCam" class="ghost">Camera off</button>
+      <button id="hold" class="ghost">Hold</button>
+      <button id="hang" class="danger">Hang up</button>
+    </div>
+  </main>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script src="ws.js"></script>
+  <script src="rtc.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    const params = new URLSearchParams(location.search);
+    const peerId = params.get('peer');
+
+    let facingMode = 'user'; // front
+    let localStream = null;
+    const pc = RTC.createPeer({ audio: true, video: true });
+
+    async function init() {
+      APP.ensureAuth();
+      WS.connect(null, handleSignal);
+      await startCamera();
+      pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
+      for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      WS.send('call-offer', { to: peerId, data: offer });
+      videoStatus.textContent = 'Calling contact...';
+    }
+
+    async function startCamera() {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode } });
+      localVideo.srcObject = localStream;
+    }
+
+    function handleSignal(evt) {
+      if (evt.type === 'call-answer' && evt.payload.from === peerId) {
+        pc.setRemoteDescription(evt.payload.data);
+        videoStatus.textContent = '';
+      }
+      if (evt.type === 'call-ice' && evt.payload.from === peerId) {
+        pc.addIceCandidate(evt.payload.data).catch(()=>{});
+      }
+      if (evt.type === 'call-hold' && evt.payload.from === peerId) {
+        videoStatus.textContent = 'On Hold';
+      }
+      if (evt.type === 'call-camera' && evt.payload.from === peerId) {
+        // remote turned off camera; show grey box
+        if (evt.payload.data.off) {
+          remoteVideo.classList.add('hidden');
+          videoStatus.textContent = 'Camera off';
+        } else {
+          remoteVideo.classList.remove('hidden');
+          videoStatus.textContent = '';
+        }
+      }
+      if (evt.type === 'call-end' && evt.payload.from === peerId) {
+        videoStatus.textContent = 'Call ended';
+        setTimeout(()=> history.back(), 1000);
+      }
+    }
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) WS.send('call-ice', { to: peerId, data: e.candidate });
+    };
+
+    switchCam.addEventListener('click', async () => {
+      facingMode = facingMode === 'user' ? 'environment' : 'user';
+      for (const t of localStream.getTracks()) t.stop();
+      await startCamera();
+      // Replace tracks
+      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      videoSender.replaceTrack(localStream.getVideoTracks()[0]);
+    });
+
+    toggleCam.addEventListener('click', () => {
+      const vt = localStream.getVideoTracks()[0];
+      vt.enabled = !vt.enabled;
+      WS.send('call-camera', { to: peerId, data: { off: !vt.enabled } });
+    });
+
+    hold.addEventListener('click', () => {
+      WS.send('call-hold', { to: peerId, data: { hold: true } });
+      videoStatus.textContent = 'On Hold';
+    });
+
+    hang.addEventListener('click', () => {
+      WS.send('call-end', { to: peerId, data: {} });
+      pc.close();
+      history.back();
+    });
+
+    init();
+  </script>
+</body>
+</html>
