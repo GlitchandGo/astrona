@@ -1,1 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Astrona — Contacts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-light">
+  <div class="nav-bar">
+    <div class="brand">Astrona</div>
+    <div class="spacer"></div>
+    <input id="search" class="search" placeholder="Search username">
+    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="settingsBtn" class="ghost">Settings</button>
+  </div>
 
+  <main class="container">
+    <div class="toolbar">
+      <button id="addContactBtn" class="primary">+ Add contact</button>
+    </div>
+
+    <ul id="contacts" class="list"></ul>
+    <h2>Search results</h2>
+    <ul id="results" class="list"></ul>
+  </main>
+
+  <div id="popup" class="popup hidden">
+    <div class="popup-card">
+      <div id="popupText"></div>
+      <div class="popup-actions">
+        <button id="popupCancel" class="ghost">Cancel</button>
+        <button id="popupOk" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script src="ws.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    document.getElementById('settingsBtn').addEventListener('click', () => location.href = 'settings.html');
+
+    async function loadContacts() {
+      const me = await API.me();
+      if (me.error) return UI.popup(me.error);
+      const { contacts } = await API.getContacts();
+      const ul = document.getElementById('contacts');
+      ul.innerHTML = '';
+      for (const c of contacts) {
+        const li = document.createElement('li');
+        li.className = 'contact';
+        li.innerHTML = `
+          <img class="avatar" src="${c.avatar || 'assets/default-avatar.png'}" alt="">
+          <div class="meta">
+            <div class="name">${c.username} <span class="num">${c.number}</span></div>
+          </div>
+          <div class="presence ${c.online ? 'on' : 'off'}"></div>
+          <div class="actions">
+            <button class="ghost" data-id="${c.id}" data-act="msg">Message</button>
+            <button class="ghost" data-id="${c.id}" data-act="call">Call</button>
+            <button class="ghost" data-id="${c.id}" data-act="video">Video</button>
+          </div>`;
+        ul.appendChild(li);
+      }
+      ul.addEventListener('click', (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        const id = b.getAttribute('data-id');
+        const act = b.getAttribute('data-act');
+        if (act === 'msg') location.href = `chat.html?peer=${id}`;
+        if (act === 'call') location.href = `call.html?peer=${id}`;
+        if (act === 'video') location.href = `video.html?peer=${id}`;
+      });
+    }
+
+    document.getElementById('addContactBtn').addEventListener('click', () => {
+      UI.prompt('Enter Astrona number (1234-5678)', async (number) => {
+        const { data, error } = await API.addContact(number);
+        if (error) return UI.popup(error);
+        loadContacts();
+      });
+    });
+
+    const search = document.getElementById('search');
+    let timer = null;
+    search.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const q = search.value.trim();
+        const { results } = await API.searchUsers(q);
+        const ul = document.getElementById('results');
+        ul.innerHTML = '';
+        for (const r of results) {
+          const li = document.createElement('li');
+          li.className = 'contact';
+          li.innerHTML = `
+            <img class="avatar" src="${r.avatar || 'assets/default-avatar.png'}" alt="">
+            <div class="meta">
+              <div class="name">${r.username} <span class="num">${r.number}</span></div>
+            </div>
+            <div class="actions">
+              <button class="primary" data-number="${r.number}">Add</button>
+            </div>`;
+          ul.appendChild(li);
+        }
+        ul.addEventListener('click', async (e) => {
+          const b = e.target.closest('button'); if (!b) return;
+          const number = b.getAttribute('data-number');
+          const { error } = await API.addContact(number);
+          if (error) return UI.popup(error);
+          loadContacts();
+        });
+      }, 250);
+    });
+
+    APP.ensureAuth();
+    WS.connect(() => loadContacts());
+  </script>
+</body>
+</html>
