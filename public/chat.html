@@ -1,1 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Astrona — Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-light">
+  <div class="nav-bar">
+    <button class="ghost" onclick="history.back()">← Back</button>
+    <div class="spacer"></div>
+    <button id="toggleTheme" class="ghost">Light/Dark</button>
+  </div>
 
+  <main class="chat">
+    <ul id="messages" class="messages"></ul>
+    <form id="composer" class="composer">
+      <input id="text" type="text" placeholder="Message (max 1000 chars)" maxlength="1000">
+      <input id="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+      <button class="primary" type="submit">Send</button>
+    </form>
+  </main>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script src="ws.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+
+    const params = new URLSearchParams(location.search);
+    const peerId = params.get('peer');
+    let threadId = null;
+
+    async function init() {
+      APP.ensureAuth();
+      const { messages } = await API.getMessages(peerId);
+      threadId = [APP.me().id, peerId].sort().join(':');
+      render(messages);
+      WS.connect(null, (evt) => {
+        if (evt.type === 'message') {
+          if ([evt.payload.senderId, evt.payload.recipientId].sort().join(':') === threadId) {
+            addMessage(evt.payload);
+            WS.delivered(threadId, evt.payload.id);
+            notifySeen();
+          }
+        }
+        if (evt.type === 'message-deleted' && evt.payload.threadId === threadId) {
+          const li = document.querySelector(`li[data-id="${evt.payload.messageId}"]`);
+          if (li) li.classList.add('deleted'), li.querySelector('.text').textContent = 'Message deleted';
+        }
+        if (evt.type === 'delivered' && evt.payload.threadId === threadId) {
+          const li = document.querySelector(`li[data-id="${evt.payload.messageId}"]`);
+          if (li) li.querySelector('.status').textContent = 'Delivered';
+        }
+        if (evt.type === 'seen' && evt.payload.threadId === threadId) {
+          for (const id of evt.payload.messageIds) {
+            const li = document.querySelector(`li[data-id="${id}"]`);
+            if (li) li.querySelector('.status').textContent = 'Seen';
+          }
+        }
+      });
+    }
+
+    function render(list) {
+      const ul = document.getElementById('messages');
+      ul.innerHTML = '';
+      for (const m of list) addMessage(m);
+      notifySeen();
+    }
+
+    function addMessage(m) {
+      const ul = document.getElementById('messages');
+      const li = document.createElement('li');
+      li.className = `bubble ${m.senderId === APP.me().id ? 'me' : 'them'} ${m.deleted ? 'deleted' : ''}`;
+      li.dataset.id = m.id;
+      li.innerHTML = `
+        ${m.image ? `<img class="img" src="${m.image}" alt="image">` : ''}
+        <div class="text">${m.deleted ? 'Message deleted' : (m.text || '')}</div>
+        <div class="meta status">${m.status || ''}</div>
+        ${m.senderId === APP.me().id && !m.deleted ? `<button class="ghost del">Delete</button>` : ''}
+      `;
+      ul.appendChild(li);
+      ul.scrollTop = ul.scrollHeight;
+
+      li.querySelector('.del')?.addEventListener('click', async () => {
+        await API.deleteMessage(threadId, m.id);
+      });
+    }
+
+    async function notifySeen() {
+      const ids = [...document.querySelectorAll('.bubble.them')].map(li => li.dataset.id);
+      if (ids.length) await API.markSeen(threadId, ids);
+    }
+
+    composer.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('text').value.trim();
+      const file = document.getElementById('image').files[0];
+      let imageData = null;
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) return UI.popup('Image max 5MB');
+        imageData = await toDataURL(file);
+      }
+      const { data, error } = await API.sendMessage(peerId, { text, image: imageData });
+      if (error) return UI.popup(error);
+      addMessage(data.message);
+      document.getElementById('text').value = '';
+      document.getElementById('image').value = '';
+    });
+
+    function toDataURL(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
