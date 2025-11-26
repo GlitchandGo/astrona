@@ -1,1 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Astrona — Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-light">
+  <div class="nav-bar">
+    <button class="ghost" onclick="history.back()">← Back</button>
+    <div class="spacer"></div>
+    <button id="toggleTheme" class="ghost">Light/Dark</button>
+  </div>
 
+  <main class="container narrow">
+    <section class="card">
+      <h1>Profile</h1>
+      <div id="me"></div>
+      <form id="profileForm">
+        <div class="row"><label>Username</label><input type="text" name="username" maxlength="20"></div>
+        <div class="row"><label>Avatar</label><input type="file" name="avatar" accept="image/*"></div>
+        <button class="primary" type="submit">Save</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h1>Blocking</h1>
+      <form id="blockForm">
+        <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\\d{4}-\\d{4}"></div>
+        <button class="danger" type="submit">Block</button>
+      </form>
+      <form id="unblockForm">
+        <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\\d{4}-\\d{4}"></div>
+        <button class="ghost" type="submit">Unblock</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    APP.ensureAuth();
+
+    async function loadMe() {
+      const { profile } = await API.me();
+      me.innerHTML = `
+        <div class="profile">
+          <img class="avatar" src="${profile.avatar || 'assets/default-avatar.png'}" alt="">
+          <div>
+            <div><strong>Username:</strong> ${profile.username}</div>
+            <div><strong>Number:</strong> ${profile.number}</div>
+          </div>
+        </div>
+      `;
+      profileForm.username.value = profile.username;
+    }
+
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(profileForm);
+      const { data, error } = await API.updateProfile(fd);
+      if (error) return UI.popup(error);
+      UI.popup('Profile updated', loadMe);
+    });
+
+    blockForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(blockForm);
+      const { error } = await API.block(fd.get('number'));
+      if (error) return UI.popup(error);
+      UI.popup('Blocked');
+    });
+
+    unblockForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(unblockForm);
+      const { error } = await API.unblock(fd.get('number'));
+      if (error) return UI.popup(error);
+      UI.popup('Unblocked');
+    });
+
+    loadMe();
+  </script>
+</body>
+</html>
