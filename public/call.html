@@ -6,22 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
 </head>
-<body class="theme-light">
+<body>
   <div class="nav-bar">
-    <button class="ghost" onclick="history.back()">← Back</button>
+    <button class="icon-btn" onclick="history.back()" title="Back">
+      <img src="assets/icons/arrow-left.svg" alt="Back" class="nav-icon">
+    </button>
+    <div class="brand"><img src="assets/icons/call.svg" alt="Call" class="nav-icon">Call</div>
     <div class="spacer"></div>
-    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="settingsBtn" class="icon-btn" title="Settings">
+      <img src="assets/icons/edit.svg" alt="Settings" class="nav-icon">
+    </button>
   </div>
 
   <main class="call">
     <div class="call-card">
-      <img id="avatar" class="avatar-lg" src="assets/default-avatar.png" alt="">
+      <img id="avatar" class="avatar-lg" src="assets/default-avatar.png" alt="Avatar">
       <div id="status" class="title">Calling...</div>
       <div class="controls">
-        <button id="mute" class="ghost">Mute</button>
-        <button id="hold" class="ghost">Hold</button>
-        <button id="hang" class="danger">Hang up</button>
+        <button id="mute" class="icon-btn" title="Mute">
+          <img src="assets/icons/mute.svg" alt="Mute" class="call-icon">
+        </button>
+        <button id="hold" class="icon-btn" title="Hold">
+          <img src="assets/icons/hold.svg" alt="Hold" class="call-icon">
+        </button>
+        <button id="hang" class="icon-btn end" title="Hang up">
+          <img src="assets/icons/end.svg" alt="Hang up" class="call-icon">
+        </button>
       </div>
       <audio id="remoteAudio" autoplay></audio>
     </div>
@@ -34,7 +46,7 @@
   <script src="rtc.js"></script>
   <script>
     UI.initPopup();
-    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    document.getElementById('settingsBtn').addEventListener('click', () => location.href = 'settings.html');
     const params = new URLSearchParams(location.search);
     const peerId = params.get('peer');
 
