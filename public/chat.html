@@ -6,12 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
 </head>
-<body class="theme-light">
+<body>
   <div class="nav-bar">
-    <button class="ghost" onclick="history.back()">← Back</button>
+    <button class="icon-btn" onclick="history.back()" title="Back">
+      <img src="assets/icons/arrow-left.svg" alt="Back" class="nav-icon">
+    </button>
+    <div class="brand"><img src="assets/icons/message.svg" alt="Messages" class="nav-icon">Chat</div>
     <div class="spacer"></div>
-    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="settingsBtn" class="icon-btn" title="Settings">
+      <img src="assets/icons/edit.svg" alt="Settings" class="nav-icon">
+    </button>
   </div>
 
   <main class="chat">
@@ -19,7 +25,7 @@
     <form id="composer" class="composer">
       <input id="text" type="text" placeholder="Message (max 1000 chars)" maxlength="1000">
       <input id="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
-      <button class="primary" type="submit">Send</button>
+      <button class="primary icon-btn" type="submit"><img src="assets/icons/message.svg" alt="Send"></button>
     </form>
   </main>
 
@@ -29,7 +35,7 @@
   <script src="ws.js"></script>
   <script>
     UI.initPopup();
-    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    document.getElementById('settingsBtn').addEventListener('click', () => location.href = 'settings.html');
 
     const params = new URLSearchParams(location.search);
     const peerId = params.get('peer');
@@ -78,10 +84,10 @@
       li.className = `bubble ${m.senderId === APP.me().id ? 'me' : 'them'} ${m.deleted ? 'deleted' : ''}`;
       li.dataset.id = m.id;
       li.innerHTML = `
-        ${m.image ? `<img class="img" src="${m.image}" alt="image">` : ''}
+        ${m.image ? `<img class="img" src="${m.image}" alt="image">` : `<img class="chat-icon" src="assets/icons/message.svg" alt="Message">`}
         <div class="text">${m.deleted ? 'Message deleted' : (m.text || '')}</div>
         <div class="meta status">${m.status || ''}</div>
-        ${m.senderId === APP.me().id && !m.deleted ? `<button class="ghost del">Delete</button>` : ''}
+        ${m.senderId === APP.me().id && !m.deleted ? `<button class="icon-btn del" title="Delete"><img src="assets/icons/end.svg" alt="Delete"></button>` : ''}
       `;
       ul.appendChild(li);
       ul.scrollTop = ul.scrollHeight;
