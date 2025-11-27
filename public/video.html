@@ -6,12 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
 </head>
-<body class="theme-light">
+<body>
   <div class="nav-bar">
-    <button class="ghost" onclick="history.back()">← Back</button>
+    <button class="icon-btn" onclick="history.back()" title="Back">
+      <img src="assets/icons/arrow-left.svg" alt="Back" class="nav-icon">
+    </button>
+    <div class="brand"><img src="assets/icons/video.svg" alt="Video" class="nav-icon">Video Call</div>
     <div class="spacer"></div>
-    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="settingsBtn" class="icon-btn" title="Settings">
+      <img src="assets/icons/edit.svg" alt="Settings" class="nav-icon">
+    </button>
   </div>
 
   <main class="video">
@@ -23,10 +29,18 @@
       <video id="localVideo" autoplay muted playsinline class="local"></video>
     </div>
     <div class="controls">
-      <button id="switchCam" class="ghost">Switch camera</button>
-      <button id="toggleCam" class="ghost">Camera off</button>
-      <button id="hold" class="ghost">Hold</button>
-      <button id="hang" class="danger">Hang up</button>
+      <button id="switchCam" class="icon-btn" title="Switch camera">
+        <img src="assets/icons/switch-camera.svg" alt="Switch camera" class="call-icon">
+      </button>
+      <button id="toggleCam" class="icon-btn" title="Camera off">
+        <img src="assets/icons/camera-off.svg" alt="Camera off" class="call-icon">
+      </button>
+      <button id="hold" class="icon-btn" title="Hold">
+        <img src="assets/icons/hold.svg" alt="Hold" class="call-icon">
+      </button>
+      <button id="hang" class="icon-btn end" title="Hang up">
+        <img src="assets/icons/end.svg" alt="Hang up" class="call-icon">
+      </button>
     </div>
   </main>
 
@@ -37,7 +51,7 @@
   <script src="rtc.js"></script>
   <script>
     UI.initPopup();
-    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    document.getElementById('settingsBtn').addEventListener('click', () => location.href = 'settings.html');
     const params = new URLSearchParams(location.search);
     const peerId = params.get('peer');
 
