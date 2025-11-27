@@ -229,6 +229,10 @@ app.post('/api/push-subscribe', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/push-public-key', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
 app.post('/api/messages/:peerId', auth, upload.none(), async (req, res) => {
   const peerId = req.params.peerId;
   const { text, image } = req.body || {};
