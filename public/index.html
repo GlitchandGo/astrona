@@ -2,76 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Astrona — Welcome</title>
+  <title>Welcome to Astrona</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
 </head>
-<body class="theme-light">
+<body>
   <div class="nav-bar">
+    <img src="assets/icons/user.svg" alt="Logo" class="nav-icon" />
     <div class="brand">Astrona</div>
     <div class="spacer"></div>
-    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="loginBtn" class="primary icon-btn" style="margin-right:5px">
+      <img src="assets/icons/user.svg" alt="Log in" />
+      Log in
+    </button>
   </div>
 
-  <main class="container narrow">
-    <section class="card">
-      <h1>Sign up</h1>
-      <form id="signupForm">
-        <div class="row"><label>Email</label><input type="email" name="email" required></div>
-        <div class="row"><label>Username</label><input type="text" name="username" maxlength="20" required></div>
-        <div class="row"><label>Password</label><input type="password" name="password" minlength="4" maxlength="20" required></div>
-        <div class="row"><label>Phone (optional)</label><input type="tel" name="phone"></div>
-        <button type="submit" class="primary">Create account</button>
-      </form>
-      <p class="meta">Server issues a unique Astrona number like 1234-5678.</p>
-    </section>
-
-    <section class="card">
-      <h1>Log in</h1>
-      <form id="loginForm">
-        <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\\d{4}-\\d{4}" required></div>
-        <div class="row"><label>Password</label><input type="password" name="password" minlength="4" maxlength="20" required></div>
-        <button type="submit" class="primary">Enter</button>
-      </form>
+  <main class="container narrow" style="display: flex; flex-direction: column; align-items: center; min-height: 80vh;">
+    <img src="assets/icons/logo.svg" style="width: 96px; height: 96px; margin-top: 32px;" alt="Astrona Logo"/>
+    <h1 style="text-align:center; font-weight:800; font-size:2em; margin: 18px 0 0 0;">Welcome to Astrona</h1>
+    <h2 style="text-align:center; font-weight:400; font-size:1.25em; color:var(--muted); margin: 8px 0 36px 0;">
+      The only chat app built with <span style="color:var(--accent);font-weight:700;">YOU</span> in mind.
+    </h2>
+    <button id="getStarted" class="primary icon-btn" style="padding:15px 36px;font-size:1.1em;box-shadow:var(--drop);margin-bottom:38px;">
+      <img src="assets/icons/plus.svg" alt="Sign up" /> Get Started - it's Free
+    </button>
+    <section class="card" style="margin-bottom:36px; width:100%;box-shadow:var(--drop);">
+      <!-- About section goes here - fill in when ready -->
+      <h2 style="font-size:1.3em;margin-bottom:10px;">About Astrona</h2>
+      <p style="color:var(--muted);font-size:1em;">
+        <!-- Write your own detailed About section here. -->
+        Astrona is designed for privacy, speed, and YOUR convenience.<br>
+        All chats, calls, and contacts are at your fingertips with a clean design and smart features.<br>
+        Built for Chromebook and the web, Astrona puts you and your friends first.
+      </p>
+      <!-- Add more About content as desired! -->
     </section>
   </main>
 
-  <div id="popup" class="popup hidden">
-    <div class="popup-card">
-      <div id="popupText"></div>
-      <button id="popupClose" class="primary">OK</button>
-    </div>
-  </div>
-
   <script src="ui.js"></script>
-  <script src="app.js"></script>
-  <script src="api.js"></script>
   <script>
-    document.getElementById('toggleTheme').addEventListener('click', window.UI.toggleTheme);
-    UI.initPopup();
-
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = new FormData(signupForm);
-      const { data, error } = await API.signup(Object.fromEntries(form.entries()));
-      if (error) return UI.popup(error);
-      APP.storeAuth(data);
-      UI.popup(`Welcome, ${data.profile.username}. Your number is ${data.profile.number}`, () => location.href = 'contacts.html');
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = new FormData(loginForm);
-      const { data, error } = await API.login(Object.fromEntries(form.entries()));
-      if (error) return UI.popup(error);
-      APP.storeAuth(data);
-      location.href = 'contacts.html';
-    });
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
+    UI.applyTheme();
+    document.getElementById('loginBtn').addEventListener('click', () => location.href = 'login.html');
+    document.getElementById('getStarted').addEventListener('click', () => location.href = 'signup.html');
   </script>
 </body>
 </html>
