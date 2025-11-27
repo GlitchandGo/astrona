@@ -6,6 +6,7 @@ const UserSchema = new mongoose.Schema({
   number: { type: String, required: true, unique: true }, // '1234-5678'
   passwordHash: { type: String, required: true },
   avatarUrl: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  pushSubscription: { type: Object }
 });
 export default mongoose.model('User', UserSchema);
