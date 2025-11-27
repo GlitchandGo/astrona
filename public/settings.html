@@ -6,34 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
 </head>
-<body class="theme-light">
+<body>
   <div class="nav-bar">
-    <button class="ghost" onclick="history.back()">← Back</button>
+    <button class="icon-btn" onclick="history.back()" title="Back">
+      <img src="assets/icons/arrow-left.svg" alt="Back" class="nav-icon">
+    </button>
+    <div class="brand">Astrona Settings</div>
     <div class="spacer"></div>
-    <button id="toggleTheme" class="ghost">Light/Dark</button>
+    <button id="themeToggleBtn" class="icon-btn" title="Switch theme">
+      <img id="themeIcon" src="assets/icons/sun.svg" alt="Theme" class="nav-icon">
+    </button>
   </div>
 
   <main class="container narrow">
     <section class="card">
-      <h1>Profile</h1>
+      <h1>
+        <img src="assets/icons/user.svg" alt="Profile" class="heading-icon">
+        Profile
+      </h1>
       <div id="me"></div>
       <form id="profileForm">
         <div class="row"><label>Username</label><input type="text" name="username" maxlength="20"></div>
         <div class="row"><label>Avatar</label><input type="file" name="avatar" accept="image/*"></div>
-        <button class="primary" type="submit">Save</button>
+        <button class="primary icon-btn" type="submit"><img src="assets/icons/edit.svg" alt="Save"> Save</button>
       </form>
     </section>
 
     <section class="card">
-      <h1>Blocking</h1>
+      <h1>
+        <img src="assets/icons/block.svg" alt="Blocking" class="heading-icon">
+        Blocking
+      </h1>
       <form id="blockForm">
         <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\\d{4}-\\d{4}"></div>
-        <button class="danger" type="submit">Block</button>
+        <button class="danger icon-btn" type="submit"><img src="assets/icons/block.svg" alt="Block"> Block</button>
       </form>
       <form id="unblockForm">
         <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\\d{4}-\\d{4}"></div>
-        <button class="ghost" type="submit">Unblock</button>
+        <button class="ghost icon-btn" type="submit"><img src="assets/icons/unblock.svg" alt="Unblock"> Unblock</button>
       </form>
     </section>
   </main>
@@ -43,14 +55,14 @@
   <script src="api.js"></script>
   <script>
     UI.initPopup();
-    document.getElementById('toggleTheme').addEventListener('click', UI.toggleTheme);
+    document.getElementById('themeToggleBtn').addEventListener('click', UI.toggleTheme);
     APP.ensureAuth();
 
     async function loadMe() {
       const { profile } = await API.me();
       me.innerHTML = `
         <div class="profile">
-          <img class="avatar" src="${profile.avatar || 'assets/default-avatar.png'}" alt="">
+          <img class="avatar" src="${profile.avatar || 'assets/default-avatar.png'}" alt="Avatar">
           <div>
             <div><strong>Username:</strong> ${profile.username}</div>
             <div><strong>Number:</strong> ${profile.number}</div>
