@@ -28,13 +28,22 @@ window.UI = {
   },
   toggleTheme() {
     const b = document.body;
-    b.classList.toggle('theme-light');
-    // Persist
+    const modeNow = b.classList.toggle('theme-light');
     localStorage.setItem('astrona_theme', b.classList.contains('theme-light') ? 'light' : 'dark');
+    // update theme icon if present
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) themeIcon.src = b.classList.contains('theme-light') ?
+      'assets/icons/sun.svg' : 'assets/icons/moon.svg';
+    window.dispatchEvent(new Event('astrona-theme-change'));
   },
   applyTheme() {
     const t = localStorage.getItem('astrona_theme') || 'light';
     document.body.classList.toggle('theme-light', t === 'light');
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) themeIcon.src = t === 'light' ?
+      'assets/icons/sun.svg' : 'assets/icons/moon.svg';
   }
 };
-UI.applyTheme();
+
+window.UI.applyTheme();
+window.addEventListener('astrona-theme-change', () => window.UI.applyTheme());
