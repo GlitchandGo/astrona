@@ -65,11 +65,20 @@ app.post('/api/signup', (req, res) => {
   if (!validateEmail(email)) return res.status(400).json({ error: 'Invalid email format' });
 
   const number = generateNumber();
-  const passwordHash = hashPass(password);
-  const user = createUser({ username, email, phone, number, passwordHash });
-  const token = jwt.sign({ id: user.id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, profile: sanitizeUser(user) });
+const passwordHash = await hashPass(password); // bcrypt
+const user = await User.create({
+  username,
+  email,
+  phone,
+  number,
+  passwordHash,
+  contacts: [],
+  blocked: [],
+  avatar: null,
+  online: false
 });
+const token = jwt.sign({ id: user._id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
+res.json({ token, profile: sanitizeUser(user) });
 
 // Login by number + password
 app.post('/api/login', (req, res) => {
