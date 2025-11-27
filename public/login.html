@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Log in — Astrona</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+  <div class="nav-bar">
+    <button class="icon-btn" onclick="history.back()" title="Back">
+      <img src="assets/icons/arrow-left.svg" alt="Back" class="nav-icon">
+    </button>
+    <div class="brand"><img src="assets/icons/user.svg" alt="Astrona" class="nav-icon">Astrona</div>
+    <div class="spacer"></div>
+    <button id="signupBtn" class="primary icon-btn" style="margin-right:5px">
+      <img src="assets/icons/plus.svg" alt="Sign up" />Sign up
+    </button>
+  </div>
+
+  <main class="container narrow">
+    <section class="card" style="margin-top:40px">
+      <h1><img src="assets/icons/user.svg" alt="Log in" class="heading-icon" />Log in</h1>
+      <form id="loginForm">
+        <div class="row"><label>Number</label><input type="text" name="number" placeholder="1234-5678" pattern="\d{4}-\d{4}" required></div>
+        <div class="row"><label>Password</label><input type="password" name="password" minlength="4" maxlength="20" required></div>
+        <button type="submit" class="primary icon-btn"><img src="assets/icons/user.svg" alt=""> Log in</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="popup" class="popup hidden">
+    <div class="popup-card">
+      <div id="popupText"></div>
+      <button id="popupClose" class="primary">OK</button>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+  <script src="api.js"></script>
+  <script>
+    UI.initPopup();
+    document.getElementById('signupBtn').addEventListener('click', () => location.href = 'signup.html');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = new FormData(loginForm);
+      const { data, error } = await API.login(Object.fromEntries(form.entries()));
+      if (error) return UI.popup(error);
+      APP.storeAuth(data);
+      location.href = 'contacts.html';
+    });
+  </script>
+</body>
+</html>
