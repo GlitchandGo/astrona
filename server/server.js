@@ -58,39 +58,51 @@ const upload = multer({
 });
 
 // Signup
-app.post('/api/signup', (req, res) => {
-  const { username, email, password, phone } = req.body || {};
-  const v = validateSignup({ username, email, password });
-  if (!v.ok) return res.status(400).json({ error: v.error });
-  if (!validateEmail(email)) return res.status(400).json({ error: 'Invalid email format' });
+app.post('/api/signup', async (req, res) => {
+  try {
+    const { username, email, password, phone } = req.body || {};
+    const v = validateSignup({ username, email, password });
+    if (!v.ok) return res.status(400).json({ error: v.error });
+    if (!validateEmail(email)) return res.status(400).json({ error: 'Invalid email format' });
 
-  const number = generateNumber();
-const passwordHash = await hashPass(password); // bcrypt
-const user = await User.create({
-  username,
-  email,
-  phone,
-  number,
-  passwordHash,
-  contacts: [],
-  blocked: [],
-  avatar: null,
-  online: false
+    const number = generateNumber();
+    // storage.hashPass is sync in storage.js; awaiting a non-promise is safe but unnecessary.
+    const passwordHash = await hashPass(password); // if you switch to bcrypt later this will be async
+    const user = await User.create({
+      username,
+      email,
+      phone,
+      number,
+      passwordHash,
+      contacts: [],
+      blocked: [],
+      avatar: null,
+      online: false
+    });
+    const token = jwt.sign({ id: user._id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, profile: sanitizeUser(user) });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
-const token = jwt.sign({ id: user._id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
-res.json({ token, profile: sanitizeUser(user) });
 
 // Login by number + password
-app.post('/api/login', (req, res) => {
-  const { number, password } = req.body || {};
-  const v = validateLogin({ number, password });
-  if (!v.ok) return res.status(400).json({ error: v.error });
-  const user = findUserByNumber(number);
-  if (!user || !verifyPass(password, user.passwordHash)) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+app.post('/api/login', async (req, res) => {
+  try {
+    const { number, password } = req.body || {};
+    const v = validateLogin({ number, password });
+    if (!v.ok) return res.status(400).json({ error: v.error });
+    const user = await findUserByNumber(number);
+    if (!user || !verifyPass(password, user.passwordHash)) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const token = jwt.sign({ id: user.id || user._id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, profile: sanitizeUser(user) });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  const token = jwt.sign({ id: user.id, number: user.number }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, profile: sanitizeUser(user) });
 });
 
 // Update profile (username, avatar upload)
@@ -315,8 +327,10 @@ wss.on('connection', (ws, req) => {
 
   // Mark online
   const user = db.users.get(userId);
-  user.online = true;
-  broadcastPresence(userId, true);
+  if (user) {
+    user.online = true;
+    broadcastPresence(userId, true);
+  }
 
   ws.on('message', (data) => {
     let msg = {};
@@ -389,5 +403,7 @@ function cryptoId() {
   return Math.random().toString(36).slice(2, 10);
 }
 function sanitizeUser(u) {
-  return { id: u.id, username: u.username, number: u.number, avatar: u.avatar || null, online: !!u.online };
-    }
+  // tolerate mongoose docs (_id) or in-memory objects (id)
+  const id = u.id || u._id || String(u._id);
+  return { id, username: u.username, number: u.number, avatar: u.avatar || null, online: !!u.online };
+}
