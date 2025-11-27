@@ -18,8 +18,8 @@ import uploadRouter from './routes/uploads.js';
 import User from './models/user.js';
 import Message from './models/message.js';
 import Group from './models/group.js';
-import Contact from './models/contact.js;
-import Block from './models/block.js;
+import Contact from './models/contact.js';
+import Block from './models/block.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
