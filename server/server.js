@@ -134,119 +134,157 @@ app.post('/api/contacts', auth, (req, res) => {
 });
 
 // Search by username (non-unique)
-app.get('/api/users/search', auth, (req, res) => {
-  const q = String(req.query.q || '').trim().toLowerCase();
-  const results = [];
-  for (const u of db.users.values()) {
-    if (u.username.toLowerCase().includes(q)) {
-      results.push({ id: u.id, username: u.username, number: u.number, avatar: u.avatar || null });
-    }
-  }
-  res.json({ results });
-});
+app.get('/api/users/search', auth, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
 
+  const results = await User.find({ username: { $regex: q, $options: 'i' } })
+    .select('_id username number avatar online')
+    .limit(50);
+
+  res.json({
+    results: results.map(u => ({
+      id: String(u._id),
+      username: u.username,
+      number: u.number,
+      avatar: u.avatar || null,
+      online: !!u.online
+    }))
+  });
+});
+  
 // Blocking
-app.post('/api/block', auth, (req, res) => {
+app.post('/api/block', auth, async (req, res) => {
   const { number } = req.body || {};
-  const target = findUserByNumber(number);
+  if (!number) return res.status(400).json({ error: 'Number required' });
+
+  const target = await User.findOne({ number });
   if (!target) return res.status(404).json({ error: 'User not found' });
-  const user = db.users.get(req.user.id);
-  if (!user.blocked.includes(target.id)) user.blocked.push(target.id);
+
+  await User.updateOne(
+    { _id: req.user.id },
+    { $addToSet: { blocked: target._id } }
+  );
+
   res.json({ ok: true });
 });
 
-app.post('/api/unblock', auth, (req, res) => {
+// Unblocking
+app.post('/api/unblock', auth, async (req, res) => {
   const { number } = req.body || {};
-  const target = findUserByNumber(number);
+  if (!number) return res.status(400).json({ error: 'Number required' });
+
+  const target = await User.findOne({ number });
   if (!target) return res.status(404).json({ error: 'User not found' });
-  const user = db.users.get(req.user.id);
-  user.blocked = user.blocked.filter(id => id !== target.id);
+
+  await User.updateOne(
+    { _id: req.user.id },
+    { $pull: { blocked: target._id } }
+  );
+
   res.json({ ok: true });
 });
 
 // Messaging
-app.get('/api/messages/:peerId', auth, (req, res) => {
+app.get('/api/messages/:peerId', auth, async (req, res) => {
   const peerId = req.params.peerId;
   const threadId = threadKey(req.user.id, peerId);
-  res.json({ messages: db.messages.get(threadId) || [] });
+
+  const messages = await Message.find({ threadId })
+    .sort({ createdAt: 1 })
+    .select('_id senderId recipientId text image status deleted createdAt');
+
+  res.json({ messages });
 });
 
-app.post('/api/messages/:peerId', auth, upload.none(), (req, res) => {
+app.post('/api/messages/:peerId', auth, upload.none(), async (req, res) => {
   const peerId = req.params.peerId;
   const { text, image } = req.body || {};
   const v = validateMessage({ text, image });
   if (!v.ok) return res.status(400).json({ error: v.error });
 
-  const sender = db.users.get(req.user.id);
-  const recipient = db.users.get(peerId);
+  const sender = await User.findById(req.user.id);
+  const recipient = await User.findById(peerId);
   if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
 
-  // Block checks: if recipient blocked sender, drop; if sender blocked recipient, prevent
-  if (recipient.blocked.includes(sender.id)) {
-    return res.status(403).json({ error: 'Recipient unavailable' });
-  }
-  if (sender.blocked.includes(recipient.id)) {
-    return res.status(403).json({ error: 'You have blocked this user' });
-  }
+  const senderBlockedRecipient = (sender.blocked || []).some(id => String(id) === String(recipient._id));
+  const recipientBlockedSender = (recipient.blocked || []).some(id => String(id) === String(sender._id));
+  if (recipientBlockedSender) return res.status(403).json({ error: 'Recipient unavailable' });
+  if (senderBlockedRecipient) return res.status(403).json({ error: 'You have blocked this user' });
 
-  const threadId = threadKey(sender.id, recipient.id);
-  const msg = {
-    id: cryptoId(),
-    senderId: sender.id,
-    recipientId: recipient.id,
+  const threadId = threadKey(sender._id, recipient._id);
+  const msg = await Message.create({
+    threadId,
+    senderId: sender._id,
+    recipientId: recipient._id,
     text: text || null,
     image: image || null,
-    createdAt: Date.now(),
-    status: 'sent' // sent -> delivered -> seen
-  };
-  const list = db.messages.get(threadId) || [];
-  list.push(msg);
-  db.messages.set(threadId, list);
+    status: 'sent',
+    createdAt: Date.now()
+  });
 
-  // Push to recipient via WS if online
-  notifyUser(recipient.id, { type: 'message', payload: msg });
+  notifyUser(String(recipient._id), { type: 'message', payload: msg });
 
   res.json({ message: msg });
 });
-
+  
 // Read receipt (mark seen)
-app.post('/api/messages/:threadId/seen', auth, (req, res) => {
+app.post('/api/messages/:threadId/seen', auth, async (req, res) => {
   const { messageIds } = req.body || {};
-  const list = db.messages.get(req.params.threadId) || [];
-  for (const m of list) {
-    if (messageIds.includes(m.id)) m.status = 'seen';
+  const threadId = req.params.threadId;
+
+  if (!Array.isArray(messageIds) || messageIds.length === 0) {
+    return res.status(400).json({ error: 'messageIds required' });
   }
-  // Notify sender(s)
-  const senders = new Set(list.filter(m => messageIds.includes(m.id)).map(m => m.senderId));
+
+  await Message.updateMany(
+    { _id: { $in: messageIds }, threadId },
+    { $set: { status: 'seen' } }
+  );
+
+  const updated = await Message.find({ _id: { $in: messageIds }, threadId })
+    .select('_id senderId');
+
+  const senders = [...new Set(updated.map(m => String(m.senderId)))];
   for (const s of senders) {
-    notifyUser(s, { type: 'seen', payload: { threadId: req.params.threadId, messageIds } });
+    notifyUser(s, { type: 'seen', payload: { threadId, messageIds } });
   }
+
   res.json({ ok: true });
 });
-
+  
 // Delete message (global tombstone)
-app.delete('/api/messages/:threadId/:messageId', auth, (req, res) => {
+app.delete('/api/messages/:threadId/:messageId', auth, async (req, res) => {
   const { threadId, messageId } = req.params;
-  const list = db.messages.get(threadId) || [];
-  const m = list.find(mm => mm.id === messageId);
-  if (!m) return res.status(404).json({ error: 'Message not found' });
-  m.deleted = true;
-  notifyUser(m.recipientId, { type: 'message-deleted', payload: { threadId, messageId } });
-  notifyUser(m.senderId, { type: 'message-deleted', payload: { threadId, messageId } });
+
+  const msg = await Message.findOne({ _id: messageId, threadId });
+  if (!msg) return res.status(404).json({ error: 'Message not found' });
+
+  msg.deleted = true;
+  await msg.save();
+
+  notifyUser(String(msg.recipientId), { type: 'message-deleted', payload: { threadId, messageId } });
+  notifyUser(String(msg.senderId), { type: 'message-deleted', payload: { threadId, messageId } });
+
   res.json({ ok: true });
 });
 
 // Minimal group support (text+images, no calls)
-app.post('/api/groups', auth, (req, res) => {
+app.post('/api/groups', auth, async (req, res) => {
   const { name, memberIds } = req.body || {};
-  const id = cryptoId();
-  db.groups.set(id, { id, name: name || 'Group', ownerId: req.user.id, memberIds: Array.from(new Set([req.user.id, ...(memberIds || [])])) });
-  res.json({ group: db.groups.get(id) });
+
+  const group = await Group.create({
+    name: name || 'Group',
+    ownerId: req.user.id,
+    memberIds: [...new Set([req.user.id, ...(memberIds || [])])]
+  });
+
+  res.json({ group });
 });
 
-app.get('/api/groups', auth, (req, res) => {
-  const mine = [...db.groups.values()].filter(g => g.memberIds.includes(req.user.id));
-  res.json({ groups: mine });
+app.get('/api/groups', auth, async (req, res) => {
+  const groups = await Group.find({ memberIds: req.user.id });
+  res.json({ groups });
 });
 
 // WebSocket server for presence, signaling, receipts, calls
