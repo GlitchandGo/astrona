@@ -20,6 +20,13 @@ import Message from './models/message.js';
 import Group from './models/group.js';
 import Contact from './models/contact.js';
 import Block from './models/block.js';
+import webpush from 'web-push';
+
+webpush.setVapidDetails(
+  'mailto:admin@astrona.giize.com', // or any dummy email/URL
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -212,6 +219,14 @@ app.get('/api/messages/:peerId', auth, async (req, res) => {
     .select('_id senderId recipientId text image status deleted createdAt');
 
   res.json({ messages });
+});
+
+app.post('/api/push-subscribe', auth, async (req, res) => {
+  const { subscription } = req.body;
+  if (!subscription) return res.status(400).json({ error: 'Missing subscription' });
+  // Store subscription in user record
+  await User.updateOne({ _id: req.user.id }, { $set: { pushSubscription: subscription } });
+  res.json({ ok: true });
 });
 
 app.post('/api/messages/:peerId', auth, upload.none(), async (req, res) => {
