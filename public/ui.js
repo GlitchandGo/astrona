@@ -7,6 +7,24 @@ window.UI = {
     if (ok) ok.addEventListener('click', () => popup.classList.add('hidden'));
     if (cancel) cancel.addEventListener('click', () => popup.classList.add('hidden'));
     if (close) close.addEventListener('click', () => popup.classList.add('hidden'));
+    // Make sure popup buttons have modern style
+    [ok, cancel, close].forEach(btn => {
+      if (btn) btn.style.borderRadius = '8px';
+      if (btn) btn.style.padding = '12px 22px';
+      if (btn && btn.classList.contains('primary')) {
+        btn.style.background = 'var(--accent)';
+        btn.style.color = '#fff';
+        btn.style.border = 'none';
+      } else if (btn && btn.classList.contains('danger')) {
+        btn.style.background = 'var(--danger)';
+        btn.style.color = '#fff';
+        btn.style.border = 'none';
+      } else if (btn && btn.classList.contains('ghost')) {
+        btn.style.background = 'var(--card)';
+        btn.style.color = 'var(--fg)';
+        btn.style.border = '1px solid var(--border)';
+      }
+    });
   },
   popup(text, onClose) {
     const popup = document.getElementById('popup');
@@ -37,8 +55,32 @@ window.UI = {
     window.dispatchEvent(new Event('astrona-theme-change'));
   },
   applyTheme() {
+    // Mixed palette: white, black, blue (blue as accent/main)
     const t = localStorage.getItem('astrona_theme') || 'light';
     document.body.classList.toggle('theme-light', t === 'light');
+    // Update brand/nav colors
+    const accent = t === 'light' ? '#1c2d45' : '#5a7cfa';
+    const cardBg = t === 'light' ? '#fff' : '#171a21';
+    const fg = t === 'light' ? '#111' : '#e6e6e6';
+    const primaryBtn = t === 'light' ? '#3056ff' : '#5a7cfa';
+    // Make nav-bar background, cards, buttons colorful
+    // Update nav-bar
+    document.querySelectorAll('.nav-bar, .card, .popup-card, .composer, .contacts, .call-card').forEach(
+      el => el && (el.style.background = cardBg)
+    );
+    document.querySelectorAll('button.primary').forEach(
+      btn => btn && (btn.style.background = primaryBtn)
+    );
+    document.querySelectorAll('button.danger').forEach(
+      btn => btn && (btn.style.background = '#e11d48')
+    );
+    document.querySelectorAll('button.ghost').forEach(
+      btn => btn && (btn.style.background = cardBg)
+    );
+    document.querySelectorAll('button').forEach(
+      btn => btn && (btn.style.color = fg)
+    );
+    // Theme icon update
     const themeIcon = document.getElementById('themeIcon');
     if (themeIcon) themeIcon.src = t === 'light' ?
       'assets/icons/sun.svg' : 'assets/icons/moon.svg';
