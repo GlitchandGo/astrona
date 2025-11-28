@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="assets/icons/favicon.svg">
+  <link rel="icon" href="assets/icons/favicon.png">
 </head>
 <body>
   <div class="nav-bar">
@@ -15,7 +15,7 @@
     <div class="spacer"></div>
     <input id="search" class="search" placeholder="Search username">
     <button id="settingsBtn" class="icon-btn" title="Settings">
-      <img src="assets/icons/edit.svg" alt="Settings" class="nav-icon">
+      <img src="assets/icons/edit.png" alt="Settings" class="nav-icon">
     </button>
   </div>
 
@@ -25,7 +25,7 @@
     </div>
 
     <ul id="contacts" class="list"></ul>
-    <h2><img src="assets/icons/search.svg" alt="Search" class="heading-icon"> Search results</h2>
+    <h2><img src="assets/icons/search.png" alt="Search" class="heading-icon"> Search results</h2>
     <ul id="results" class="list"></ul>
   </main>
 
@@ -60,7 +60,7 @@
           <img class="avatar" src="${c.avatar || 'assets/default-avatar.png'}" alt="Avatar">
           <div class="meta">
             <div class="name">
-              <img src="assets/icons/user.svg" alt="" class="inline-icon">
+              <img src="assets/icons/user.png" alt="" class="inline-icon">
               ${c.username} <span class="num">${c.number}</span>
             </div>
           </div>
@@ -68,9 +68,9 @@
             <img src="assets/icons/${c.online ? 'online' : 'offline'}.svg" alt="Presence" class="presence-icon">
           </div>
           <div class="actions">
-            <button class="icon-btn" data-id="${c.id}" data-act="msg" title="Message"><img src="assets/icons/message.svg" alt="Chat"></button>
-            <button class="icon-btn" data-id="${c.id}" data-act="call" title="Call"><img src="assets/icons/call.svg" alt="Call"></button>
-            <button class="icon-btn" data-id="${c.id}" data-act="video" title="Video"><img src="assets/icons/video.svg" alt="Video"></button>
+            <button class="icon-btn" data-id="${c.id}" data-act="msg" title="Message"><img src="assets/icons/message.png" alt="Chat"></button>
+            <button class="icon-btn" data-id="${c.id}" data-act="call" title="Call"><img src="assets/icons/call.png" alt="Call"></button>
+            <button class="icon-btn" data-id="${c.id}" data-act="video" title="Video"><img src="assets/icons/video.png" alt="Video"></button>
           </div>`;
         ul.appendChild(li);
       }
@@ -108,12 +108,12 @@
             <img class="avatar" src="${r.avatar || 'assets/default-avatar.png'}" alt="Avatar">
             <div class="meta">
               <div class="name">
-                <img src="assets/icons/user.svg" alt="" class="inline-icon">
+                <img src="assets/icons/user.png" alt="" class="inline-icon">
                 ${r.username} <span class="num">${r.number}</span>
               </div>
             </div>
             <div class="actions">
-              <button class="primary icon-btn" data-number="${r.number}" title="Add"><img src="assets/icons/plus.svg" alt="Add"></button>
+              <button class="primary icon-btn" data-number="${r.number}" title="Add"><img src="assets/icons/plus.png" alt="Add"></button>
             </div>`;
           ul.appendChild(li);
         }
